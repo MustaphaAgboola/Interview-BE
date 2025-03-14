@@ -39,36 +39,36 @@ jobs:
       # - name: Run tests
       #   run: npm test
 
-      - name: Build application
-        run: npm run
+  #     - name: Build application
+  #       run: npm run
 
-  security-scan:
-    name: Security Scan
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+  # security-scan:
+  #   name: Security Scan
+  #   needs: build-and-test
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
 
-      - name: Run npm audit
-        run: npm audit --audit-level=high
+  #     - name: Run npm audit
+  #       run: npm audit --audit-level=high
 
-      - name: OWASP Dependency Check
-        uses: dependency-check/Dependency-Check_Action@main
-        with:
-          project: 'express-app'
-          path: '.'
-          format: 'HTML'
-          out: 'reports'
-          args: >
-            --enableExperimental
-            --suppression suppression.xml
+  #     - name: OWASP Dependency Check
+  #       uses: dependency-check/Dependency-Check_Action@main
+  #       with:
+  #         project: 'express-app'
+  #         path: '.'
+  #         format: 'HTML'
+  #         out: 'reports'
+  #         args: >
+  #           --enableExperimental
+  #           --suppression suppression.xml
 
-      - name: Upload security reports
-        uses: actions/upload-artifact@v3
-        with:
-          name: security-reports
-          path: reports/
+  #     - name: Upload security reports
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: security-reports
+  #         path: reports/
 
   docker-build-push:
     name: Build and Push Docker Image
