@@ -1,0 +1,14 @@
+# kubernetes/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: expressjs-app
+  labels:
+    app: expressjs-app
+spec:
+  selector:
+    app: expressjs-app
+  ports:
+    - port: 80
+      targetPort: 3000
+  type: LoadBalancer
