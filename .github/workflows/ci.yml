@@ -110,11 +110,11 @@ jobs:
       #     severity: 'CRITICAL,HIGH'
 
   deploy:
-   name: Deploy to EKS
-   needs: docker-build-push
-   runs-on: ubuntu-latest
-   if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-   steps:
+    name: Deploy to EKS
+    needs: docker-build-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    steps:
     - name: Checkout code
       uses: actions/checkout@v3
     
@@ -130,19 +130,35 @@ jobs:
         aws sts get-caller-identity
         aws eks describe-cluster --name ${{ env.EKS_CLUSTER_NAME }}
     
-    - name: Update kube config
-      run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
-    
-    - name: Debug Kubernetes Config
+    - name: Fix EKS Authentication
       run: |
-        kubectl config view
-        kubectl cluster-info
-        kubectl auth can-i get deployments
-    
-    - name: Get EKS token
-      run: |
-        CLUSTER_ARN=$(aws eks describe-cluster --name ${{ env.EKS_CLUSTER_NAME }} --query "cluster.arn" --output text)
-        aws eks get-token --cluster-name ${{ env.EKS_CLUSTER_NAME }}
+        # Get the current AWS identity ARN
+        CALLER_ARN=$(aws sts get-caller-identity --query "Arn" --output text)
+        ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+        
+        # Create a temporary patch file for aws-auth
+        cat <<EOF > aws-auth-patch.yaml
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: aws-auth
+          namespace: kube-system
+        data:
+          mapUsers: |
+            - userarn: ${CALLER_ARN}
+              username: github-actions
+              groups:
+                - system:masters
+        EOF
+        
+        # Get temporary admin credentials
+        aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }} --role-arn arn:aws:iam::${ACCOUNT_ID}:role/EksAdminRole
+        
+        # Apply the patch
+        kubectl apply -f aws-auth-patch.yaml
+        
+        # Reset kubeconfig to use the GitHub Actions user
+        aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
     
     - name: Update deployment image
       run: |
