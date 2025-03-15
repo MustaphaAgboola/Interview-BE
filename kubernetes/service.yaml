@@ -1,4 +1,3 @@
-# kubernetes/service.yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -8,5 +7,5 @@ spec:
     app: interview-be
   ports:
     - port: 80
-      targetPort: 3000
+      targetPort: 8080
   type: LoadBalancer
