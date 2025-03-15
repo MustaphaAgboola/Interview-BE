@@ -25,8 +25,6 @@ COPY --from=builder /app/  ./
 # Expose the port the app runs on
 EXPOSE 8080
 
-# Set the environment variables
-ENV NODE_ENV=production
 
 # Serve the app
 CMD ["node", "server.js"]
