@@ -35,10 +35,9 @@ jobs:
       env:
         DOCKERHUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
         REPOSITORY: interview-be
-        IMAGE_TAG: 1.1
       run: |
-        docker build -t $DOCKER_HUB_USERNAME/$REPOSITORY:$IMAGE_TAG .
-        docker push $DOCKER_HUB_USERNAME/$REPOSITORY:$IMAGE_TAG
+        docker build -t $DOCKER_HUB_USERNAME/$REPOSITORY .
+        docker push $DOCKER_HUB_USERNAME/$REPOSITORY
 
     - name: Update kube config
       run: aws eks update-kubeconfig --name my-cluster 
