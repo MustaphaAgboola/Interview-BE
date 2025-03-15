@@ -7,5 +7,5 @@ spec:
     app: interview-be
   ports:
     - port: 80
-      targetPort: 8080
+      targetPort: 4000
   type: LoadBalancer
