@@ -36,7 +36,7 @@ jobs:
         DOCKERHUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
         REPOSITORY: interview-BE
       run: |
-        docker build -t 6lackcoder/interview-be:1.1.
+        docker build -t 6lackcoder/interview-be:1.1 .
         docker push 6lackcoder/interview-be:1.1
 
     - name: Update kube config
