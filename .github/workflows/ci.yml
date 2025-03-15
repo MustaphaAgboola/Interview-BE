@@ -40,7 +40,7 @@ jobs:
         docker push 6lackcoder/interview-be:1.1
 
     - name: Update kube config
-      run: aws eks update-kubeconfig --name my-cluster 
+      run: aws eks update-kubeconfig --name demo-cluster
     
     - name: Deploy to EKS
       run: |
