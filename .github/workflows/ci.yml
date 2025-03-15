@@ -36,8 +36,8 @@ jobs:
         DOCKERHUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
         REPOSITORY: interview-BE
       run: |
-        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/interview-be:${{ github.sha }} .
-        docker push ${{ secrets.DOCKERHUB_USERNAME }}/interview-be:${{ github.sha }}
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/interview-be:1.1 .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/interview-be:1.1
 
     - name: Update kube config
       run: aws eks update-kubeconfig --name my-cluster 
