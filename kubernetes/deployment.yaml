@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: interview-be
-          image: 6lackcoder/interview-be:lastest
+          image: 6lackcoder/interview-BE
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

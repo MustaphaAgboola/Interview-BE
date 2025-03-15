@@ -34,7 +34,7 @@ jobs:
     - name: Build, tag, and push docker image to Docker Hub
       env:
         DOCKERHUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
-        REPOSITORY: interview-be
+        REPOSITORY: interview-BE
       run: |
         docker build -t $DOCKER_HUB_USERNAME/$REPOSITORY .
         docker push $DOCKER_HUB_USERNAME/$REPOSITORY
