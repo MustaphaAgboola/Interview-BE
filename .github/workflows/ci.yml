@@ -110,34 +110,50 @@ jobs:
       #     severity: 'CRITICAL,HIGH'
 
   deploy:
-    name: Deploy to EKS
-    needs: docker-build-push
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-      
-      - name: Update kube config
-        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
-      
-      - name: Update deployment image
-        run: |
-          sed -i "s|image:.*|image: ${{ env.DOCKER_HUB_IMAGE }}:${{ github.sha }}|g" kubernetes/deployment.yaml
-      
-      - name: Apply Kubernetes manifests
-        run: |
-          kubectl apply -f kubernetes/deployment.yaml --validate=false
-          kubectl apply -f kubernetes/service.yaml --validate=false
-          
-      - name: Verify deployment
-        run: |
-          kubectl rollout status deployment/${{ env.APP_NAME }}
-          echo "✅ Application successfully deployed to EKS!"
+   name: Deploy to EKS
+   needs: docker-build-push
+   runs-on: ubuntu-latest
+   if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+   steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Debug AWS Identity
+      run: |
+        aws sts get-caller-identity
+        aws eks describe-cluster --name ${{ env.EKS_CLUSTER_NAME }}
+    
+    - name: Update kube config
+      run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+    
+    - name: Debug Kubernetes Config
+      run: |
+        kubectl config view
+        kubectl cluster-info
+        kubectl auth can-i get deployments
+    
+    - name: Get EKS token
+      run: |
+        CLUSTER_ARN=$(aws eks describe-cluster --name ${{ env.EKS_CLUSTER_NAME }} --query "cluster.arn" --output text)
+        aws eks get-token --cluster-name ${{ env.EKS_CLUSTER_NAME }}
+    
+    - name: Update deployment image
+      run: |
+        sed -i "s|image:.*|image: ${{ env.DOCKER_HUB_IMAGE }}:${{ github.sha }}|g" kubernetes/deployment.yaml
+    
+    - name: Apply Kubernetes manifests
+      run: |
+        kubectl apply -f kubernetes/deployment.yaml --validate=false
+        kubectl apply -f kubernetes/service.yaml --validate=false
+        
+    - name: Verify deployment
+      run: |
+        kubectl rollout status deployment/${{ env.APP_NAME }}
+        echo "✅ Application successfully deployed to EKS!"
