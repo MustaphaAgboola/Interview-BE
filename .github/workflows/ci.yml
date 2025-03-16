@@ -1,4 +1,4 @@
-name: Node.js app deploy to EKS
+name: Node.js App Deploy to EKS
 
 on:
   push:
@@ -9,66 +9,68 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      AWS_REGION: us-east-1
-      EKS_CLUSTER_NAME: my-cluster
-      DOCKER_IMAGE: 6lackcoder/interview-be:1.1
 
     steps:
+    # 1. Checkout Code
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # Cache Node modules for faster builds
-    - name: Cache Node modules
-      uses: actions/cache@v3
+    # 2. Install Node.js (for build and test)
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
       with:
-        path: node_modules
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
+        node-version: '20'
 
-    # Install dependencies and run tests
+    # 3. Install Dependencies
     - name: Install dependencies
-      run: npm ci
+      run: npm install
 
-    # Docker Build, Scan & Push to Docker Hub
+    # 4. Install Docker Buildx for Caching Layers
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+
+    # 6. Configure AWS Credentials
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-2
+
+    # 7. Login to Docker Hub
     - name: Login to Docker Hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-    - name: Build Docker Image
-      run: docker build -t $DOCKER_IMAGE .
+    # 8. Build, Tag, and Push Docker Image with Caching
+    - name: Build and Push Docker Image
+      run: |
+        docker buildx build \
+        --platform linux/amd64 \
+        --tag 6lackcoder/interview-be:1.1 \
+        --cache-from=type=registry,ref=6lackcoder/interview-be:cache \
+        --cache-to=type=inline \
+        --push .
 
-    - name: Push Docker Image to Docker Hub
-      run: docker push $DOCKER_IMAGE
-
-    # Configure AWS Credentials
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: $AWS_REGION
-
-    # Install kubectl
+    # 9. Install kubectl
     - name: Install kubectl
-      uses: azure/setup-kubectl@v2
+      uses: azure/setup-kubectl@v3
       with:
         version: 'v1.24.0'
 
-    # Set up kubeconfig for EKS Cluster
-    - name: Update kube config
-      run: aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
-    
-    # Deploy to EKS
+    # 10. Update kubeconfig for EKS
+    - name: Update kubeconfig
+      run: aws eks update-kubeconfig --name my-cluster --region us-east-1
+
+    # 11. Deploy to EKS
     - name: Deploy to EKS
       run: |
         kubectl apply -f kubernetes/deployment.yaml
         kubectl apply -f kubernetes/service.yaml
 
-    # Verify Deployment Status
-    - name: Verify Deployment
-      run: |
-        kubectl rollout status deployment/<deployment-name>
+    # 12. Check Pod Status after Deployment
+    - name: Check Pod Status
+      run: kubectl get pods -n default
