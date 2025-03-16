@@ -1,4 +1,5 @@
-name: Node js app deploy to EKS
+name: Node.js app deploy to EKS
+
 on:
   push:
     branches: [ "main" ]
@@ -8,41 +9,66 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1
+      EKS_CLUSTER_NAME: my-cluster
+      DOCKER_IMAGE: 6lackcoder/interview-be:1.1
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Install kubectl
-      uses: azure/setup-kubectl@v2.0
+    # Cache Node modules for faster builds
+    - name: Cache Node modules
+      uses: actions/cache@v3
       with:
-        version: 'v1.24.0' # default is latest stable
-      id: install
+        path: node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-2
+    # Install dependencies and run tests
+    - name: Install dependencies
+      run: npm ci
 
+    # Docker Build, Scan & Push to Docker Hub
     - name: Login to Docker Hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
-        password: ${{ secrets.DOCKER_HUB_TOKEN}}
+        password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-    - name: Build, tag, and push docker image to Docker Hub
-      env:
-        DOCKERHUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
-        REPOSITORY: interview-BE
-      run: |
-        docker build -t 6lackcoder/interview-be:1.1 .
-        docker push 6lackcoder/interview-be:1.1
+    - name: Build Docker Image
+      run: docker build -t $DOCKER_IMAGE .
 
+    - name: Push Docker Image to Docker Hub
+      run: docker push $DOCKER_IMAGE
+
+    # Configure AWS Credentials
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: $AWS_REGION
+
+    # Install kubectl
+    - name: Install kubectl
+      uses: azure/setup-kubectl@v2
+      with:
+        version: 'v1.24.0'
+
+    # Set up kubeconfig for EKS Cluster
     - name: Update kube config
-      run: aws eks update-kubeconfig --name my-cluster --region us-east-1 
+      run: aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
     
+    # Deploy to EKS
     - name: Deploy to EKS
       run: |
         kubectl apply -f kubernetes/deployment.yaml
         kubectl apply -f kubernetes/service.yaml
+
+    # Verify Deployment Status
+    - name: Verify Deployment
+      run: |
+        kubectl rollout status deployment/<deployment-name>

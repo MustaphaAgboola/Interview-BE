@@ -19,5 +19,5 @@ spec:
           image: 6lackcoder/interview-be:1.1
           imagePullPolicy: Always
           ports:
-            - containerPort: 8080
+            - containerPort: 4000
           
